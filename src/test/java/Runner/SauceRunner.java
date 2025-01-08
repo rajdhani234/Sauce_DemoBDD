@@ -7,15 +7,14 @@ import io.cucumber.testng.CucumberOptions;
 	    features = "src/test/resources/Features/SauceDemo.feature",
 	    glue = "stepDefinations",
 	    plugin = { 
-	        "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:",
+	        "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:", // Extent Reports
 	        "html:target/cucumber-reports/cucumber.html", 
 	        "json:target/cucumber-reports/cucumber.json" 
 	    },
 	    monochrome = true,
 	    dryRun = false
 	)
+	public class SauceRunner extends AbstractTestNGCucumberTests {
+	}
 
-public class SauceRunner extends AbstractTestNGCucumberTests {
 
-
-}
