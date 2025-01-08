@@ -1,5 +1,7 @@
 package stepDefinations;
 
+import java.util.concurrent.TimeoutException;
+
 import BaseLayer.BaseClass;
 import PageLayer.CartPage;
 import UtilsLayer.Utils;
@@ -20,11 +22,11 @@ public class CartStep extends BaseClass {
 		System.out.println("Cartstep Current URL: " + currentUrl);
 	}
 
-	@When("user clicks on cart button")
-	public void user_clicks_on_cart_button() {
+	@When("user click on cartButton")
+	public void user_click_on_cart_button() {
+
 		cartPage.clickOnCart();
 	}
-
 
 	@When("user click on CheckOutButton")
 	public void user_click_on_check_out_button() {

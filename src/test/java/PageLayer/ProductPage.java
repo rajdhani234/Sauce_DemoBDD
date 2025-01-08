@@ -20,6 +20,8 @@ public class ProductPage extends BaseClass {
 		cartPage = new CartPage();
 	}
 
+	private By productPageTitle = By.xpath("//span[@data-test='title']"); // Example XPath, adjust accordingly
+
 	// Add product to the cart dynamically by product name
 	public void addProductToCartByName(String productName) {
 		String productId = generateAddToCartId(productName);
@@ -42,5 +44,9 @@ public class ProductPage extends BaseClass {
 	@When("user click on cartButton")
 	public void user_click_on_cart_button() {
 		cartPage.clickOnCart();
+	}
+
+	public void verifyProductPage() {
+		wait.until(ExpectedConditions.visibilityOfElementLocated(productPageTitle));
 	}
 }
