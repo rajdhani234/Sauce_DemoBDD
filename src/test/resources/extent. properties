@@ -1,0 +1,27 @@
+# Spark Report Configuration
+extent.reporter.spark.start=true
+extent.reporter.spark.out=reports/spark-report/automation-report.html
+
+# PDF Report Configuration
+extent.reporter.pdf.start=true
+extent.reporter.pdf.out=reports/pdf-report/automation-report.pdf
+
+# HTML Report Configuration
+extent.reporter.html.start=true
+extent.reporter.html.out=reports/html-report/automation-report.html
+
+# Screenshot Configuration
+screenshot.dir=test-output/screenshots/
+screenshot.rel.path=../screenshots/
+
+# Folder and Date-Time Naming Configuration
+basefolder.name=reports/
+basefolder.datetimepattern=dd-MMM-yyyy_HH-mm-ss
+
+# Spark Report View Order
+extent.reporter.spark.vieworder=dashboard,test,author,category,exception,log
+
+# System Information
+systeminfo.user=John Doe
+systeminfo.build=1.0.0
+systeminfo.AppName=SauceDemo Automation
