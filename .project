@@ -11,6 +11,7 @@
 			</arguments>
 		</buildCommand>
 		<buildCommand>
+<<<<<<< HEAD
 			<name>cucumber.eclipse.builder.stepdefinition</name>
 			<arguments>
 			</arguments>
@@ -21,13 +22,18 @@
 			</arguments>
 		</buildCommand>
 		<buildCommand>
+=======
+>>>>>>> ce0b8175680716e4b8fb78abb146b02bd86e3454
 			<name>org.eclipse.m2e.core.maven2Builder</name>
 			<arguments>
 			</arguments>
 		</buildCommand>
 	</buildSpec>
 	<natures>
+<<<<<<< HEAD
 		<nature>cucumber.eclipse.nature</nature>
+=======
+>>>>>>> ce0b8175680716e4b8fb78abb146b02bd86e3454
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.m2e.core.maven2Nature</nature>
 	</natures>
