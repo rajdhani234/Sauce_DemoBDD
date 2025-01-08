@@ -12,6 +12,7 @@ public class BaseClass {
 	public static void initialization(String browser) {
 		if (browser.equalsIgnoreCase("chrome")) {
 			driver = new ChromeDriver();
+		
 		}
 
 		else {
