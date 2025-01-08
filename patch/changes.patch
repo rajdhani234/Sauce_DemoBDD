@@ -1,0 +1,1056 @@
+diff --git a/src/test/java/BaseLayer/BaseClass.java b/src/test/java/BaseLayer/BaseClass.java
+index 1f002a4..f9c1b23 100644
+--- a/src/test/java/BaseLayer/BaseClass.java
++++ b/src/test/java/BaseLayer/BaseClass.java
+@@ -1,26 +1,33 @@
+ package BaseLayer;
+ 
++import java.time.Duration;
++
+ import org.openqa.selenium.WebDriver;
+ import org.openqa.selenium.chrome.ChromeDriver;
+-import java.time.Duration;
+ 
+ public class BaseClass {
+-    protected static WebDriver driver;
++	public static WebDriver driver;
++
++	// Initialize WebDriver and open the Sauce Demo login page
++	public static void initialization(String browser) {
++		if (browser.equalsIgnoreCase("chrome")) {
++			driver = new ChromeDriver();
++		}
+ 
+-    // Initialize WebDriver and open the Sauce Demo login page
+-    public static void initialization() {
+-        driver = new ChromeDriver();
+-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(30));
+-        driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
+-        driver.manage().deleteAllCookies();
+-        driver.manage().window().maximize();
+-        driver.get("https://www.saucedemo.com");
+-    }
++		else {
++			throw new IllegalArgumentException("Unsupported browser: " + browser);
++		}
++		driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(30));
++		driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
++		driver.manage().deleteAllCookies();
++		driver.manage().window().maximize();
++		driver.get("https://www.saucedemo.com");
++	}
+ 
+-    // Close the driver after the test completes
+-    public static void tearDown() {
+-        if (driver != null) {
+-            driver.quit();
+-        }
+-    }
++	// Close the driver after the test completes
++	public static void tearDown() {
++		if (driver != null) {
++			driver.quit();
++		}
++	}
+ }
+diff --git a/src/test/java/PageLayer/CartPage.java b/src/test/java/PageLayer/CartPage.java
+index 0cc5447..609d3d0 100644
+--- a/src/test/java/PageLayer/CartPage.java
++++ b/src/test/java/PageLayer/CartPage.java
+@@ -5,7 +5,6 @@ import org.openqa.selenium.By;
+ import org.openqa.selenium.WebElement;
+ import org.openqa.selenium.support.ui.ExpectedConditions;
+ import org.openqa.selenium.support.ui.WebDriverWait;
+-
+ import BaseLayer.BaseClass;
+ import UtilsLayer.ScrollUtils;
+ 
+@@ -17,7 +16,7 @@ public class CartPage extends BaseClass {
+     private By cartButton = By.xpath("//a[@class='shopping_cart_link']");
+     private By checkoutButton = By.id("checkout");
+ 
+-    // Constructor: Inherit driver from BaseClass and initialize WebDriverWait and ScrollUtils
++    // Constructor: Initialize WebDriverWait and ScrollUtils
+     public CartPage() {
+         this.wait = new WebDriverWait(driver, Duration.ofSeconds(30)); // Initialize WebDriverWait
+         this.scrollUtils = new ScrollUtils(driver); // Initialize ScrollUtils
+@@ -30,18 +29,19 @@ public class CartPage extends BaseClass {
+ 
+         while (retries > 0 && !isClicked) {
+             try {
+-                // Attempt to locate and click the cart button
++                // Ensure the cart button is clickable
+                 WebElement cartBtn = wait.until(ExpectedConditions.elementToBeClickable(cartButton));
+-                cartBtn.click();
+-                isClicked = true; // Mark as clicked if successful
++                cartBtn.click(); // Attempt to click the cart button
++                isClicked = true;
++                System.out.println("Cart button clicked successfully.");
+             } catch (Exception e) {
+-                System.err.println("Cart button not clickable, scrolling to make it visible. Retries left: " + retries);
+-                scrollUtils.scrollToTop(); // Scroll to the top of the page
++                // Log and scroll to make the element visible
++                System.out.println("Cart button not clickable. Retrying...");
++                scrollUtils.scrollToTop(); // Scroll to make it visible
+                 retries--;
+             }
+         }
+ 
+-        // Throw an exception if the button was not clicked after retries
+         if (!isClicked) {
+             throw new RuntimeException("Failed to click on the cart button after multiple retries.");
+         }
+@@ -50,11 +50,33 @@ public class CartPage extends BaseClass {
+     // Method to click on the checkout button
+     public void clickOnCheckOutBtn() {
+         try {
+-            // Wait for the checkout button to be clickable
++            // Wait until the checkout button is clickable
+             WebElement checkoutBtn = wait.until(ExpectedConditions.elementToBeClickable(checkoutButton));
+-            checkoutBtn.click(); // Click the checkout button
++            checkoutBtn.click(); // Attempt to click the checkout button
++            System.out.println("Checkout button clicked successfully.");
++        } catch (Exception e) {
++            throw new RuntimeException("Failed to click on the checkout button.");
++        }
++    }
++
++    // Method to verify if the checkout page is displayed after clicking checkout button
++    public boolean isCheckoutPageDisplayed() {
++        try {
++            WebElement checkoutPageElement = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("checkout_title"))); // Assuming a title or header is present on the checkout page
++            return checkoutPageElement.isDisplayed();
++        } catch (Exception e) {
++            return false;
++        }
++    }
++
++    // Method to verify if the cart contains products
++    public boolean isProductInCart(String productName) {
++        try {
++            By productLocator = By.xpath("//div[@class='cart_item']//div[@class='inventory_item_name'][text()='" + productName + "']");
++            WebElement productInCart = wait.until(ExpectedConditions.visibilityOfElementLocated(productLocator));
++            return productInCart.isDisplayed();
+         } catch (Exception e) {
+-            throw new RuntimeException("Failed to click on the checkout button.", e);
++            return false; // Product not found in the cart
+         }
+     }
+ }
+diff --git a/src/test/java/PageLayer/CheckoutPage.java b/src/test/java/PageLayer/CheckoutPage.java
+index fd6b8d2..61a323c 100644
+--- a/src/test/java/PageLayer/CheckoutPage.java
++++ b/src/test/java/PageLayer/CheckoutPage.java
+@@ -1,51 +1,78 @@
+ package PageLayer;
+ 
+ import java.time.Duration;
+-
+ import org.openqa.selenium.By;
++import org.openqa.selenium.WebDriver;
++import org.openqa.selenium.WebElement;
++import org.openqa.selenium.support.ui.ExpectedConditions;
+ import org.openqa.selenium.support.ui.WebDriverWait;
+-
+ import BaseLayer.BaseClass;
+ 
+ public class CheckoutPage extends BaseClass {
+-	private By firstNameField = By.id("first-name");
+-	private By lastNameField = By.id("last-name");
+-	private By zipCodeField = By.id("postal-code");
+-	private By continueButton = By.id("continue");
+-	private By finishButton = By.id("finish");
+-	private By message =By.xpath("//h2[@class='complete-header']");
++    // Locators for checkout page elements
++    private By firstNameField = By.id("first-name");
++    private By lastNameField = By.id("last-name");
++    private By zipCodeField = By.id("postal-code");
++    private By continueButton = By.id("continue");
++    private By finishButton = By.id("finish");
++    private By message = By.xpath("//h2[@class='complete-header']");
+ 
+-	WebDriverWait wait;
++    // WebDriverWait for element synchronization
++    private WebDriverWait wait;
+ 
+-	public CheckoutPage() {
+-		this.wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+-	}
++    public CheckoutPage() {
++        this.wait = new WebDriverWait(driver, Duration.ofSeconds(30));
++    }
+ 
+-	// Methods to interact with the checkout form fields
+-	public void enterFirstName(String firstName) {
+-		driver.findElement(firstNameField).sendKeys(firstName);
+-	}
++    // Method to wait for an element to be visible
++    private WebElement waitForElementToBeVisible(By locator) {
++        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
++    }
+ 
+-	public void enterLastName(String lastName) {
+-		driver.findElement(lastNameField).sendKeys(lastName);
+-	}
++    // Methods to interact with the checkout form fields
++    public void enterFirstName(String firstName) {
++        WebElement firstNameElement = waitForElementToBeVisible(firstNameField);
++        firstNameElement.clear();
++        firstNameElement.sendKeys(firstName);
++    }
+ 
+-	public void enterZipCode(String zipCode) {
+-		driver.findElement(zipCodeField).sendKeys(zipCode);
+-	}
++    public void enterLastName(String lastName) {
++        WebElement lastNameElement = waitForElementToBeVisible(lastNameField);
++        lastNameElement.clear();
++        lastNameElement.sendKeys(lastName);
++    }
+ 
+-	public void clickContinueButton() {
+-		driver.findElement(continueButton).click();
+-	}
++    public void enterZipCode(String zipCode) {
++        WebElement zipCodeElement = waitForElementToBeVisible(zipCodeField);
++        zipCodeElement.clear();
++        zipCodeElement.sendKeys(zipCode);
++    }
+ 
+-	public void clickFinishButton() {
+-		driver.findElement(finishButton).click();
++    // Method to fill in shipping information
++    public void enterShippingInformation(String firstName, String lastName, String zipCode) {
++        enterFirstName(firstName);
++        enterLastName(lastName);
++        enterZipCode(zipCode);
++    }
+ 
+-	}
++    // Method to click continue button and wait for the next page
++    public void clickContinueButton() {
++        WebElement continueBtn = waitForElementToBeVisible(continueButton);
++        continueBtn.click();
++        wait.until(ExpectedConditions.urlContains("checkout-step-two"));
++    }
+ 
+-	public String getSuccessMessage() {
+-		return driver.findElement(By.className("complete-header")).getText();
+-	}
++    // Method to click finish button and verify success message
++    public void clickFinishButton() {
++        WebElement finishBtn = waitForElementToBeVisible(finishButton);
++        finishBtn.click();
++    }
+ 
+-}
++    // Method to get the success message after completing the checkout
++    public String getSuccessMessage() {
++        WebElement successMessage = waitForElementToBeVisible(message);
++        return successMessage.getText();
++    }
+ 
++	
++}
+diff --git a/src/test/java/PageLayer/LoginPage.java b/src/test/java/PageLayer/LoginPage.java
+index c3de680..78e2977 100644
+--- a/src/test/java/PageLayer/LoginPage.java
++++ b/src/test/java/PageLayer/LoginPage.java
+@@ -1,51 +1,69 @@
+ package PageLayer;
+ 
+ import java.time.Duration;
+-
+ import org.openqa.selenium.By;
+ import org.openqa.selenium.WebElement;
+ import org.openqa.selenium.support.ui.ExpectedConditions;
+ import org.openqa.selenium.support.ui.WebDriverWait;
+-
+ import BaseLayer.BaseClass;
+ import UtilsLayer.ScrollUtils;
+ 
+ public class LoginPage extends BaseClass {
+-	private By usernameField = By.id("user-name");
+-	private By passwordField = By.id("password");
+-	private By loginButton = By.id("login-button");
+-
+-	private By menuBtn = By.id("react-burger-menu-btn");
+-	private By logutLinkBtn = By.id("logout_sidebar_link");
+-
+-	private WebDriverWait wait;
+-
+-	public LoginPage() {
+-		this.driver = driver;
+-		this.wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+-	}
+-
+-	public void enterUsername(String username) {
+-		driver.findElement(usernameField).sendKeys(username);
+-	}
+-
+-	public void enterPassword(String password) {
+-		driver.findElement(passwordField).sendKeys(password);
+-	}
+-
+-	public void clickLoginButton() {
+-		driver.findElement(loginButton).click();
+-	}
+-
+-	public void clickOnMenu() {
+-		ScrollUtils scu = new ScrollUtils(driver);
+-		scu.scrollToTop();
+-		WebElement menu = wait.until(ExpectedConditions.elementToBeClickable(menuBtn));
+-		menu.click();
+-	}
+-
+-	public void clickOnLogOut() {
+-		WebElement logoutButton = wait.until(ExpectedConditions.elementToBeClickable(logutLinkBtn));
+-		logoutButton.click();
+-	}
++    private By usernameField = By.id("user-name");
++    private By passwordField = By.id("password");
++    private By loginButton = By.id("login-button");
++    private By menuBtn = By.id("react-burger-menu-btn");
++    private By logoutLinkBtn = By.id("logout_sidebar_link");
++
++    private WebDriverWait wait;
++
++    public LoginPage() {
++        this.wait = new WebDriverWait(driver, Duration.ofSeconds(30));
++    }
++
++    // Check if the login page is displayed
++    public boolean isLoginPageDisplayed() {
++        try {
++            WebElement usernameFieldElement = wait.until(ExpectedConditions.visibilityOfElementLocated(usernameField));
++            return usernameFieldElement.isDisplayed();
++        } catch (Exception e) {
++            return false; // If not displayed, return false
++        }
++    }
++
++    public void enterUsername(String username) {
++        WebElement usernameElement = wait.until(ExpectedConditions.visibilityOfElementLocated(usernameField));
++        usernameElement.sendKeys(username);
++    }
++
++    public void enterPassword(String password) {
++        WebElement passwordElement = wait.until(ExpectedConditions.visibilityOfElementLocated(passwordField));
++        passwordElement.sendKeys(password);
++    }
++
++    public void clickLoginButton() {
++        WebElement loginBtnElement = wait.until(ExpectedConditions.elementToBeClickable(loginButton));
++        loginBtnElement.click();
++    }
++
++    public void clickOnMenu() {
++        ScrollUtils scu = new ScrollUtils(driver);
++        scu.scrollToTop(); // Ensure the menu is visible
++        WebElement menu = wait.until(ExpectedConditions.elementToBeClickable(menuBtn));
++        menu.click();
++    }
++
++    public void clickOnLogOut() {
++        WebElement logoutButton = wait.until(ExpectedConditions.elementToBeClickable(logoutLinkBtn));
++        logoutButton.click();
++    }
++
++    public boolean isLogoutLinkVisible() {
++        try {
++            WebElement logoutButton = wait.until(ExpectedConditions.visibilityOfElementLocated(logoutLinkBtn));
++            return logoutButton.isDisplayed();
++        } catch (Exception e) {
++            return false; // If the logout button is not visible, login failed
++        }
++    }
+ }
+diff --git a/src/test/java/PageLayer/ProductPage.java b/src/test/java/PageLayer/ProductPage.java
+index 7097e74..9815ba1 100644
+--- a/src/test/java/PageLayer/ProductPage.java
++++ b/src/test/java/PageLayer/ProductPage.java
+@@ -1,52 +1,54 @@
+ package PageLayer;
+ 
+ import java.time.Duration;
+-
+ import org.openqa.selenium.By;
+ import org.openqa.selenium.WebElement;
+ import org.openqa.selenium.support.ui.ExpectedConditions;
+ import org.openqa.selenium.support.ui.WebDriverWait;
+-
+ import BaseLayer.BaseClass;
+-import io.cucumber.java.en.When;
++import UtilsLayer.ScrollUtils;
+ 
+ public class ProductPage extends BaseClass {
+-	private WebDriverWait wait;
+-	static CartPage cartPage;
+-
+-	// Constructor: Inherit driver from BaseClass and initialize WebDriverWait
+-	public ProductPage() {
+-		this.wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+-		cartPage = new CartPage();
+-	}
+-
+-	private By productPageTitle = By.xpath("//span[@data-test='title']"); // Example XPath, adjust accordingly
+-
+-	// Add product to the cart dynamically by product name
+-	public void addProductToCartByName(String productName) {
+-		String productId = generateAddToCartId(productName);
+-		System.out.println("Generated Add to Cart ID: " + productId);
+-
+-		try {
+-			WebElement addToCartButton = wait.until(ExpectedConditions.elementToBeClickable(By.id(productId)));
+-			addToCartButton.click();
+-			System.out.println("Clicked Add to Cart for product: " + productName);
+-		} catch (Exception e) {
+-			System.out.println("Error while adding product to cart: " + e.getMessage());
+-		}
+-	}
+-
+-	// Helper method to generate Add to Cart button ID
+-	private String generateAddToCartId(String productName) {
+-		return "add-to-cart-" + productName.toLowerCase().replace(" ", "-").replace("'", "");
+-	}
+-
+-	@When("user click on cartButton")
+-	public void user_click_on_cart_button() {
+-		cartPage.clickOnCart();
+-	}
+-
+-	public void verifyProductPage() {
+-		wait.until(ExpectedConditions.visibilityOfElementLocated(productPageTitle));
+-	}
++    private WebDriverWait wait;
++    private static CartPage cartPage;
++
++    public ProductPage() {
++        this.wait = new WebDriverWait(driver, Duration.ofSeconds(30)); // Default timeout
++        cartPage = new CartPage(); // Initialize CartPage for later use
++    }
++
++    private By productPageTitle = By.xpath("//span[@data-test='title']");
++
++    private By addToCartButtonBy(String productName) {
++        return By.id(generateAddToCartId(productName)); // Dynamic XPath generation
++    }
++
++    public boolean addProductToCartByName(String productName) {
++        String productId = generateAddToCartId(productName); // Generate Add to Cart ID
++
++        try {
++            WebElement addToCartButton = wait.until(ExpectedConditions.elementToBeClickable(addToCartButtonBy(productName)));
++            addToCartButton.click(); // Click the Add to Cart button
++            return true; // Successfully added
++        } catch (Exception e) {
++            return false; // Error handling if unable to add
++        }
++    }
++
++    private String generateAddToCartId(String productName) {
++        return "add-to-cart-" + productName.toLowerCase().replace(" ", "-").replace("'", "");
++    }
++
++    public boolean verifyProductPage() {
++        try {
++            WebElement title = wait.until(ExpectedConditions.visibilityOfElementLocated(productPageTitle));
++            return true; // Product page loaded successfully
++        } catch (Exception e) {
++            return false; // Product page failed to load
++        }
++    }
++
++    public void navigateToCart() {
++        cartPage.clickOnCart(); // Navigate to the cart page
++    }
+ }
+diff --git a/src/test/java/stepDefinations/CartStep.java b/src/test/java/stepDefinations/CartStep.java
+index cd71b9a..be7d97a 100644
+--- a/src/test/java/stepDefinations/CartStep.java
++++ b/src/test/java/stepDefinations/CartStep.java
+@@ -1,36 +1,44 @@
+ package stepDefinations;
+ 
+-import java.util.concurrent.TimeoutException;
++import org.testng.Assert;
+ 
+ import BaseLayer.BaseClass;
+ import PageLayer.CartPage;
+-import UtilsLayer.Utils;
++import PageLayer.CheckoutPage;
+ import io.cucumber.java.en.Given;
+ import io.cucumber.java.en.Then;
+ import io.cucumber.java.en.When;
+ 
+-public class CartStep extends BaseClass {
++public class CartStep {
+ 
+-	private Utils util; // Declare the Utils object
+ 	private CartPage cartPage;
++	private CheckoutPage checkoutPage;
+ 
+-	@Given("user is on product page")
+-	public void user_is_on_product_page() {
+-		util = new Utils();
++	public CartStep() {
+ 		cartPage = new CartPage();
+-		String currentUrl = util.getUrl();
+-		System.out.println("Cartstep Current URL: " + currentUrl);
++		checkoutPage = new CheckoutPage();
+ 	}
+ 
+-	@When("user click on cartButton")
+-	public void user_click_on_cart_button() {
++	@Given("user is on product page")
++	public void user_is_on_product_page() {
++		System.out.println(BaseClass.driver.getCurrentUrl());
++	}
+ 
++	// Scenario: User clicks the cart icon
++	@When("user clicks on the cart icon")
++	public void user_clicks_on_the_cart_icon() {
+ 		cartPage.clickOnCart();
+ 	}
+ 
+-	@When("user click on CheckOutButton")
+-	public void user_click_on_check_out_button() {
++	// Scenario: User clicks the checkout button
++	@When("user clicks on the checkout button")
++	public void user_clicks_on_the_checkout_button() {
+ 		cartPage.clickOnCheckOutBtn();
+ 	}
+ 
++	// Scenario: User confirms the cart contains the correct product
++	@Then("user confirms the cart contains the product {string}")
++	public void user_confirms_the_cart_contains_the_product(String productName) {
++		Assert.assertTrue(cartPage.isProductInCart(productName), "The cart does not contain the correct product.");
++	}
+ }
+diff --git a/src/test/java/stepDefinations/CheckOutStep.java b/src/test/java/stepDefinations/CheckOutStep.java
+index ec3a2f7..6083219 100644
+--- a/src/test/java/stepDefinations/CheckOutStep.java
++++ b/src/test/java/stepDefinations/CheckOutStep.java
+@@ -1,183 +1,59 @@
+-//package stepDefinations;
+-//
+-//import java.io.IOException;
+-//import java.time.Duration;
+-//
+-//import org.openqa.selenium.By;
+-//import org.openqa.selenium.support.ui.ExpectedConditions;
+-//import org.openqa.selenium.support.ui.WebDriverWait;
+-//
+-//import BaseLayer.BaseClass;
+-//import PageLayer.CheckoutPage;
+-//import PageLayer.ProductPage;
+-//import UtilsLayer.Utils;
+-//import io.cucumber.java.en.Given;
+-//import io.cucumber.java.en.Then;
+-//import io.cucumber.java.en.When;
+-//
+-//public class CheckOutStep extends BaseClass {
+-//
+-//	private CheckoutPage checkOut; // Declare the CheckoutPage object
+-//	private Utils util; // Declare the Utils object
+-//	private ProductPage productPage; // Define the page object
+-//
+-////	public CheckOutStep(CheckoutPage checkOut) {
+-////		this.checkOut = checkOut;
+-////	}
+-//
+-//	@Then("user is on checkOutInfo page firstname {string} lastname {string} zip {string}")
+-//	public void user_is_on_check_out_info_page_firstname_lastname_zip(String firstname, String lastname,
+-//			String postalZip) {
+-//		util = new Utils(); // Initialize the Utils object
+-//		checkOut = new CheckoutPage(); // Initialize the CheckoutPage object
+-//		productPage = new ProductPage(); // Initialize the page object
+-//		productPage.verifyProductPage();
+-//
+-//		// Enter user details in checkout fields
+-//		checkOut.enterFirstName(firstname);
+-//		checkOut.enterLastName(lastname);
+-//		checkOut.enterZipCode(postalZip);
+-//	}
+-//
+-//	@Then("user is on checkOutInfo page")
+-//	public void user_is_on_check_out_info_page() {
+-//		System.out.println("User navigated to the Checkout Info Page.");
+-//	}
+-//
+-//	@Then("click on continue button")
+-//	public void click_on_continue_button() {
+-//		checkOut.clickContinueButton(); // Click on the Continue button
+-//		System.out.println("Continue button clicked.");
+-//	}
+-//
+-//	@Given("User is on Checkout Overview page")
+-//	public void user_is_on_checkout_overview_page() {
+-//		util = new Utils(); // Initialize Utils if not already done
+-//		String currentUrl = util.getUrl(); // Get the current URL
+-//		System.out.println("Checkout Overview Page Current URL: " + currentUrl);
+-//	}
+-//
+-//	@Then("capture screenshot")
+-//	public void capture_screenshot() throws IOException {
+-//		util = new Utils(); // Ensure Utils is initialized
+-//		util.fullScreenshot("saucedemo", "order"); // Capture full screenshot with name "order"
+-//		System.out.println("Screenshot captured for order.");
+-//	}
+-//
+-//	@When("user click on finsh Button")
+-//	public void user_click_on_finsh_button() {
+-//		if (checkOut == null) {
+-//			checkOut = new CheckoutPage(); // Initialize if null
+-//		}
+-//		checkOut.clickFinishButton();
+-//	}
+-//
+-//	@Then("show message")
+-//	public void show_message() {
+-//		if (checkOut == null) {
+-//			checkOut = new CheckoutPage(); // Initialize if null
+-//		}
+-//		checkOut.clickFinishButton();
+-//
+-//		String successMessage = checkOut.getSuccessMessage(); // Fetch success message
+-//		System.out.println("Order Success Message: " + successMessage);
+-//
+-//		driver.findElement(By.id("finish")).click();
+-//		WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+-//		wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h2[@class='complete-header']")));
+-//		String orderConfirmation = driver.findElement(By.xpath("//h2[@class='complete-header']")).getText();
+-//		System.out.println("Order Confirmation Message: " + orderConfirmation);
+-//
+-//	}
+-//}
+-
+ package stepDefinations;
+ 
+ import java.io.IOException;
+-import java.time.Duration;
+ 
+-import org.openqa.selenium.By;
+-import org.openqa.selenium.support.ui.ExpectedConditions;
+-import org.openqa.selenium.support.ui.WebDriverWait;
++import org.testng.Assert;
+ 
+-import BaseLayer.BaseClass;
+ import PageLayer.CheckoutPage;
+-import PageLayer.ProductPage;
+ import UtilsLayer.Utils;
+ import io.cucumber.java.en.Given;
+ import io.cucumber.java.en.Then;
+ import io.cucumber.java.en.When;
+ 
+-public class CheckOutStep extends BaseClass {
++public class CheckoutStep {
++
++	private CheckoutPage checkoutPage;
++	private Utils util;
+ 
+-    private CheckoutPage checkOut;
+-    private Utils util;
+-    private ProductPage productPage;
++	public CheckoutStep() {
++		checkoutPage = new CheckoutPage();
++		util = new Utils();
++	}
+ 
+-    // Initialize Page objects once before each test
+-    @Given("user is on checkOutInfo page firstname {string} lastname {string} zip {string}")
+-    public void user_is_on_check_out_info_page_firstname_lastname_zip(String firstname, String lastname, String postalZip) {
+-        util = new Utils();  // Initialize the Utils object
+-        checkOut = new CheckoutPage();  // Initialize the CheckoutPage object
+-        productPage = new ProductPage();  // Initialize the ProductPage object
+-        
+-        productPage.verifyProductPage();  // Ensure the user is on the product page
+-        
+-        // Enter user details in checkout fields
+-        checkOut.enterFirstName(firstname);
+-        checkOut.enterLastName(lastname);
+-        checkOut.enterZipCode(postalZip);
+-    }
++	// Scenario: User provides shipping information
++	@When("user is on checkOutInfo page firstname {string} lastname {string} zip {string}")
++	public void user_is_on_check_out_info_page_firstname_lastname_zip(String firstName, String lastName,
++			String zipCode) {
++		checkoutPage.enterShippingInformation(firstName, lastName, zipCode);
++	}
+ 
+-    @Then("user is on checkOutInfo page")
+-    public void user_is_on_check_out_info_page() {
+-        System.out.println("User navigated to the Checkout Info Page.");
+-    }
++	@Then("click on continue button")
++	public void click_on_continue_button() {
++		checkoutPage.clickContinueButton();
++	}
+ 
+-    @Then("click on continue button")
+-    public void click_on_continue_button() {
+-        checkOut.clickContinueButton(); // Click on the Continue button
+-        System.out.println("Continue button clicked.");
+-    }
++	@Given("User is on Checkout Overview page")
++	public void user_is_on_checkout_overview_page() {
+ 
+-    @Given("User is on Checkout Overview page")
+-    public void user_is_on_checkout_overview_page() {
+-        util = new Utils();  // Ensure Utils is initialized
+-        String currentUrl = util.getUrl();  // Get the current URL of the page
+-        System.out.println("Checkout Overview Page Current URL: " + currentUrl);
+-    }
++	}
+ 
+-    @Then("capture screenshot")
+-    public void capture_screenshot() throws IOException {
+-        util = new Utils();  // Ensure Utils is initialized
+-        util.fullScreenshot("saucedemo", "order"); // Capture full screenshot with name "order"
+-        System.out.println("Screenshot captured for order.");
+-    }
++	@Then("capture screenshot")
++	public void capture_screenshot() throws IOException {
+ 
+-    @When("user click on finsh Button")
+-    public void user_click_on_finsh_button() {
+-        if (checkOut == null) {
+-            checkOut = new CheckoutPage(); // Initialize if null
+-        }
+-        checkOut.clickFinishButton();  // Click the finish button
+-    }
+-    
++		util.fullScreenshot("saucedemo", "order");
++	}
+ 
+-    @Then("show message")
+-    public void show_message() {
+-        if (checkOut == null) {
+-            checkOut = new CheckoutPage();  // Initialize if null
+-        }
+-        checkOut.clickFinishButton();  // Click the finish button again to complete the order
++	// Scenario: User confirms the order
++	@When("user click on finish Button")
++	public void user_click_on_finish_button() {
++		checkoutPage.clickFinishButton();
+ 
+-        String successMessage = checkOut.getSuccessMessage();  // Fetch the success message
+-        System.out.println("Order Success Message: " + successMessage);
++	}
+ 
+-        // Perform additional actions after finishing the checkout process
+-        driver.findElement(By.id("finish")).click();  // Example of clicking 'finish' button
+-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h2[@class='complete-header']")));
+-        String orderConfirmation = driver.findElement(By.xpath("//h2[@class='complete-header']")).getText();
+-        System.out.println("Order Confirmation Message: " + orderConfirmation);
+-    }
++	// Scenario: User verifies the order completion message
++	@Then("user should see the order confirmation message")
++	public void user_should_see_the_order_confirmation_message() {
++		Assert.assertEquals(checkoutPage.getSuccessMessage(), "Thank you for your order!\r\n"
++				+ "Your order has been dispatched, and will arrive just as fast as the pony can get there!");
++	}
+ }
+diff --git a/src/test/java/stepDefinations/CommonStepDefinitions.java b/src/test/java/stepDefinations/CommonStepDefinitions.java
+new file mode 100644
+index 0000000..20204c6
+--- /dev/null
++++ b/src/test/java/stepDefinations/CommonStepDefinitions.java
+@@ -0,0 +1,51 @@
++package stepDefinations;
++
++import org.testng.Assert;
++
++import PageLayer.CartPage;
++import PageLayer.LoginPage;
++import PageLayer.ProductPage;
++import io.cucumber.java.en.Then;
++import io.cucumber.java.en.When;
++
++public class CommonStepDefinitions {
++
++	private LoginPage loginPage;
++	private ProductPage productPage;
++	private CartPage cartPage;
++
++	public CommonStepDefinitions() {
++		loginPage = new LoginPage();
++		productPage = new ProductPage();
++		cartPage = new CartPage();
++	}
++
++	@When("user logs in with username {string} and password {string}")
++	public void user_logs_in_with_username_and_password(String username, String password) {
++		loginPage.enterUsername(username);
++		loginPage.enterPassword(password);
++		loginPage.clickLoginButton();
++	}
++
++	@When("user adds product {string} to the cart")
++	public void user_adds_product_to_cart(String productName) {
++		productPage.addProductToCartByName(productName);
++	}
++
++	@Then("user verifies the product {string} is added to the cart")
++	public void user_verifies_product_is_added_to_cart(String productName) {
++		Assert.assertTrue(cartPage.isProductInCart(productName), "Product not found in cart.");
++	}
++
++	@When("user click on menu button")
++	public void user_click_on_menu_button() {
++
++		loginPage.clickOnMenu();
++	}
++
++	@When("sideBar is open and click on logOut")
++	public void side_bar_is_open_and_click_on_log_out() {
++		loginPage.clickOnLogOut();
++	}
++
++}
+diff --git a/src/test/java/stepDefinations/LoginStep.java b/src/test/java/stepDefinations/LoginStep.java
+index 12c399c..ea90859 100644
+--- a/src/test/java/stepDefinations/LoginStep.java
++++ b/src/test/java/stepDefinations/LoginStep.java
+@@ -1,62 +1,34 @@
+ package stepDefinations;
+ 
++import org.testng.Assert;
+ import BaseLayer.BaseClass;
+ import PageLayer.LoginPage;
+ import io.cucumber.java.en.Given;
+-import io.cucumber.java.en.Then;
+ import io.cucumber.java.en.When;
++import io.cucumber.java.en.Then;
+ 
+-public class LoginStep extends BaseClass {
+-
+-	private LoginPage loginPage;
+-
+-	@Given("Sauce user is on the login page")
+-	public void sauce_user_is_on_the_login_page() {
+-		BaseClass.initialization(); // Open browser and navigate to URL
+-		loginPage = new LoginPage(); // Initialize LoginPage object
+-	}
+-
+-	@When("user enters username as {string} and password as {string}")
+-	public void user_enters_username_as_and_password_as(String username, String password) {
+-		if (loginPage == null) {
+-			System.out.println("LoginPage object is not initialized!");
+-			loginPage = new LoginPage();
+-		}
+-		loginPage.enterUsername(username); // Enter username
+-		loginPage.enterPassword(password); // Enter password
+-	}
+-
+-	@Then("user clicks on the login button")
+-	public void user_clicks_on_the_login_button() {
+-		if (loginPage == null) {
+-			System.out.println("LoginPage object is not initialized!");
+-			loginPage = new LoginPage();
+-		}
+-		loginPage.clickLoginButton(); // Click login button
+-	}
+-
+-	@When("user click on menu button")
+-	public void user_click_on_menu_buton() {
+-		if (loginPage == null) {
+-			System.out.println("Reinitializing LoginPage object...");
+-			loginPage = new LoginPage();
+-		}
+-		loginPage.clickOnMenu();
+-	}
+-
+-	@When("sideBar is open and click on logOut")
+-	public void side_bar_is_open_and_click_on_log_out() {
+-		if (loginPage == null) {
+-			System.out.println("Reinitializing LoginPage object...");
+-			loginPage = new LoginPage();
+-		}
+-		loginPage.clickOnLogOut();
+-	}
+-	
+-	@Then("user is on loginPage")
+-	public void user_is_on_login_page() {
+-	    // Write code here that turns the phrase above into concrete actions
+-	    throw new io.cucumber.java.PendingException();
+-	}
+-
++public class LoginStep {
++
++    private LoginPage loginPage;
++
++    // Scenario: User lands on the login page
++    @Given("Sauce user is on the login page")
++    public void sauce_user_is_on_the_login_page() {
++        BaseClass.initialization("chrome");
++        loginPage = new LoginPage();
++        Assert.assertTrue(loginPage.isLoginPageDisplayed(), "Login page is not displayed.");
++    }
++
++    // Scenario: User enters valid credentials
++    @When("user enters username as {string} and password as {string}")
++    public void user_enters_username_as_and_password_as(String username, String password) {
++        loginPage.enterUsername(username);
++        loginPage.enterPassword(password);
++    }
++
++    // Scenario: User clicks on the login button
++    @When("user clicks on the login button")
++    public void user_clicks_on_the_login_button() {
++        loginPage.clickLoginButton();
++    }
+ }
+diff --git a/src/test/java/stepDefinations/ProductStep.java b/src/test/java/stepDefinations/ProductStep.java
+index 63fc1b1..c3123ac 100644
+--- a/src/test/java/stepDefinations/ProductStep.java
++++ b/src/test/java/stepDefinations/ProductStep.java
+@@ -1,36 +1,61 @@
+ package stepDefinations;
+ 
++import org.testng.Assert;
++
+ import BaseLayer.BaseClass;
+-import PageLayer.CartPage;
+ import PageLayer.ProductPage;
++import PageLayer.CartPage;
+ import io.cucumber.java.en.Given;
+-import io.cucumber.java.en.Then;
+ import io.cucumber.java.en.When;
++import io.cucumber.java.en.Then;
++
++public class ProductStep {
++
++	private ProductPage productPage;
++	private CartPage cartPage;
++
++	public ProductStep() {
++		productPage = new ProductPage();
++		cartPage = new CartPage();
++	}
++
++	// Scenario: User navigates to the product page
++	@Given("user is on the product page")
++	public void user_is_on_the_product_page() {
++		Assert.assertTrue(BaseClass.driver.getCurrentUrl().contains("https://www.saucedemo.com/inventory.html"),
++				"User is not on the product page.");
++	}
++
++	@Then("user validates the product page URL")
++	public void user_validates_the_product_page_url() {
++		Assert.assertTrue(BaseClass.driver.getCurrentUrl().contains("https://www.saucedemo.com/inventory.html"),
++				"User is not on the product page.");
+ 
+-public class ProductStep extends BaseClass {
+-    private ProductPage productPage;
+-    private CartPage cartPage;
++	}
+ 
+-    @Given("user is on the product page")
+-    public void user_is_on_the_product_page() {
+-        productPage = new ProductPage();
+-        cartPage = new CartPage();
+-    }
++	@Then("user validates the product page title")
++	public void user_validates_the_product_page_title() {
++		String title = BaseClass.driver.getTitle();
++		System.out.println(title);
+ 
+-    @Then("user validates the product page URL")
+-    public void user_validates_the_product_page_url() {
+-        System.out.println("Current URL: " + driver.getCurrentUrl());
+-    }
++//		// Assert that the title contains the expected text
++//		Assert.assertTrue(title.contains("Single Page Apps for GitHub Page"),
++//				"User is not on the correct product page. Current page title: " + title);
+ 
+-    @Then("user validates the product page title")
+-    public void user_validates_the_product_page_title() {
+-        System.out.println("Page Title: " + driver.getTitle());
+-    }
++	}
+ 
+-    @Then("adds {string} to the cart by clicking on the Add to Cart button")
+-    public void adds_to_the_cart_by_clicking_on_the_add_to_cart_button(String productName) {
+-        productPage.addProductToCartByName(productName);
+-    }
++	// Scenario: User adds a specific product to the cart
++	@When("user adds {string} to the cart by clicking on the Add to Cart button")
++	public void adds_to_the_cart_by_clicking_on_the_add_to_cart_button(String productName) {
++		boolean isProductAdded = productPage.addProductToCartByName(productName);
++		Assert.assertTrue(isProductAdded, "Product not added to cart.");
++	}
+ 
+-   
++	// Scenario: User checks if the product is in the cart
++	@Then("user validates the cart contains {string}")
++	public void user_validates_the_cart_contains(String productName) {
++		cartPage.clickOnCart();
++		// Assert.assertTrue(cartPage.isProductInCart(productName), "Product not found
++		// in cart.");
++	}
+ }
+diff --git a/src/test/resources/Features/SauceDemo.feature b/src/test/resources/Features/SauceDemo.feature
+index 22080f1..3f73018 100644
+--- a/src/test/resources/Features/SauceDemo.feature
++++ b/src/test/resources/Features/SauceDemo.feature
+@@ -1,36 +1,35 @@
+ Feature: Sauce Demo Application
+ 
+ Scenario: Validate Login Functionality
+-Given Sauce user is on the login page
+-When user enters username as "standard_user" and password as "secret_sauce"
+-Then user clicks on the login button
++  Given Sauce user is on the login page
++  When user enters username as "standard_user" and password as "secret_sauce"
++  Then user clicks on the login button
+ 
+ Scenario: Validate Home Page Functionality
+-Given user is on the product page
+-Then user validates the product page URL
+-And user validates the product page title
+-And adds "<product>" to the cart by clicking on the Add to Cart button
++  Given user is on the product page
++  Then user validates the product page URL
++  And user validates the product page title
++  When user adds "<product>" to the cart by clicking on the Add to Cart button
+ 
+ Examples:
+-| product                    |
+-| Sauce Labs Bolt T-Shirt    |
+-| Sauce Labs Fleece Jacket   |
+-| Sauce Labs Backpack        |
++  | product                    |
++  | Sauce Labs Bolt T-Shirt    |
++  | Sauce Labs Fleece Jacket   |
++  | Sauce Labs Backpack        |
+ 
+ Scenario: Validate Checkout Page
+-Given user is on product page
+-When  user click on cartButton
+-And user click on CheckOutButton
+-When user is on checkOutInfo page firstname "abc" lastname "paq" zip "411014"
+-Then click on continue button
++  Given user is on product page
++  When user clicks on the cart icon
++  And user clicks on the checkout button
++  When user is on checkOutInfo page firstname "abc" lastname "paq" zip "411014"
++  Then click on continue button
+ 
+ Scenario: order details page
+-Given User is on Checkout Overview page
+-Then capture screenshot
+-When user click on finsh Button
+-Then capture screenshot 
+-
++  Given User is on Checkout Overview page
++  Then capture screenshot
++  When user click on finish Button
++  Then capture screenshot
+ 
+ Scenario: user logout
+-When user click on menu button
+-When sideBar is open and click on logOut
++  When user click on menu button
++  When sideBar is open and click on logOut

@@ -5,7 +5,6 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-
 import BaseLayer.BaseClass;
 import UtilsLayer.ScrollUtils;
 
@@ -17,7 +16,7 @@ public class CartPage extends BaseClass {
     private By cartButton = By.xpath("//a[@class='shopping_cart_link']");
     private By checkoutButton = By.id("checkout");
 
-    // Constructor: Inherit driver from BaseClass and initialize WebDriverWait and ScrollUtils
+    // Constructor: Initialize WebDriverWait and ScrollUtils
     public CartPage() {
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(30)); // Initialize WebDriverWait
         this.scrollUtils = new ScrollUtils(driver); // Initialize ScrollUtils
@@ -30,18 +29,19 @@ public class CartPage extends BaseClass {
 
         while (retries > 0 && !isClicked) {
             try {
-                // Attempt to locate and click the cart button
+                // Ensure the cart button is clickable
                 WebElement cartBtn = wait.until(ExpectedConditions.elementToBeClickable(cartButton));
-                cartBtn.click();
-                isClicked = true; // Mark as clicked if successful
+                cartBtn.click(); // Attempt to click the cart button
+                isClicked = true;
+                System.out.println("Cart button clicked successfully.");
             } catch (Exception e) {
-                System.err.println("Cart button not clickable, scrolling to make it visible. Retries left: " + retries);
-                scrollUtils.scrollToTop(); // Scroll to the top of the page
+                // Log and scroll to make the element visible
+                System.out.println("Cart button not clickable. Retrying...");
+                scrollUtils.scrollToTop(); // Scroll to make it visible
                 retries--;
             }
         }
 
-        // Throw an exception if the button was not clicked after retries
         if (!isClicked) {
             throw new RuntimeException("Failed to click on the cart button after multiple retries.");
         }
@@ -50,11 +50,33 @@ public class CartPage extends BaseClass {
     // Method to click on the checkout button
     public void clickOnCheckOutBtn() {
         try {
-            // Wait for the checkout button to be clickable
+            // Wait until the checkout button is clickable
             WebElement checkoutBtn = wait.until(ExpectedConditions.elementToBeClickable(checkoutButton));
-            checkoutBtn.click(); // Click the checkout button
+            checkoutBtn.click(); // Attempt to click the checkout button
+            System.out.println("Checkout button clicked successfully.");
         } catch (Exception e) {
-            throw new RuntimeException("Failed to click on the checkout button.", e);
+            throw new RuntimeException("Failed to click on the checkout button.");
+        }
+    }
+
+    // Method to verify if the checkout page is displayed after clicking checkout button
+    public boolean isCheckoutPageDisplayed() {
+        try {
+            WebElement checkoutPageElement = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("checkout_title"))); // Assuming a title or header is present on the checkout page
+            return checkoutPageElement.isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Method to verify if the cart contains products
+    public boolean isProductInCart(String productName) {
+        try {
+            By productLocator = By.xpath("//div[@class='cart_item']//div[@class='inventory_item_name'][text()='" + productName + "']");
+            WebElement productInCart = wait.until(ExpectedConditions.visibilityOfElementLocated(productLocator));
+            return productInCart.isDisplayed();
+        } catch (Exception e) {
+            return false; // Product not found in the cart
         }
     }
 }
