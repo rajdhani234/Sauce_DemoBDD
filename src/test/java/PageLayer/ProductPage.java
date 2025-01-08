@@ -1,52 +1,54 @@
 package PageLayer;
 
 import java.time.Duration;
-
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-
 import BaseLayer.BaseClass;
-import io.cucumber.java.en.When;
+import UtilsLayer.ScrollUtils;
 
 public class ProductPage extends BaseClass {
-	private WebDriverWait wait;
-	static CartPage cartPage;
+    private WebDriverWait wait;
+    private static CartPage cartPage;
 
-	// Constructor: Inherit driver from BaseClass and initialize WebDriverWait
-	public ProductPage() {
-		this.wait = new WebDriverWait(driver, Duration.ofSeconds(30));
-		cartPage = new CartPage();
-	}
+    public ProductPage() {
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(30)); // Default timeout
+        cartPage = new CartPage(); // Initialize CartPage for later use
+    }
 
-	private By productPageTitle = By.xpath("//span[@data-test='title']"); // Example XPath, adjust accordingly
+    private By productPageTitle = By.xpath("//span[@data-test='title']");
 
-	// Add product to the cart dynamically by product name
-	public void addProductToCartByName(String productName) {
-		String productId = generateAddToCartId(productName);
-		System.out.println("Generated Add to Cart ID: " + productId);
+    private By addToCartButtonBy(String productName) {
+        return By.id(generateAddToCartId(productName)); // Dynamic XPath generation
+    }
 
-		try {
-			WebElement addToCartButton = wait.until(ExpectedConditions.elementToBeClickable(By.id(productId)));
-			addToCartButton.click();
-			System.out.println("Clicked Add to Cart for product: " + productName);
-		} catch (Exception e) {
-			System.out.println("Error while adding product to cart: " + e.getMessage());
-		}
-	}
+    public boolean addProductToCartByName(String productName) {
+        String productId = generateAddToCartId(productName); // Generate Add to Cart ID
 
-	// Helper method to generate Add to Cart button ID
-	private String generateAddToCartId(String productName) {
-		return "add-to-cart-" + productName.toLowerCase().replace(" ", "-").replace("'", "");
-	}
+        try {
+            WebElement addToCartButton = wait.until(ExpectedConditions.elementToBeClickable(addToCartButtonBy(productName)));
+            addToCartButton.click(); // Click the Add to Cart button
+            return true; // Successfully added
+        } catch (Exception e) {
+            return false; // Error handling if unable to add
+        }
+    }
 
-	@When("user click on cartButton")
-	public void user_click_on_cart_button() {
-		cartPage.clickOnCart();
-	}
+    private String generateAddToCartId(String productName) {
+        return "add-to-cart-" + productName.toLowerCase().replace(" ", "-").replace("'", "");
+    }
 
-	public void verifyProductPage() {
-		wait.until(ExpectedConditions.visibilityOfElementLocated(productPageTitle));
-	}
+    public boolean verifyProductPage() {
+        try {
+            WebElement title = wait.until(ExpectedConditions.visibilityOfElementLocated(productPageTitle));
+            return true; // Product page loaded successfully
+        } catch (Exception e) {
+            return false; // Product page failed to load
+        }
+    }
+
+    public void navigateToCart() {
+        cartPage.clickOnCart(); // Navigate to the cart page
+    }
 }

@@ -1,62 +1,34 @@
 package stepDefinations;
 
+import org.testng.Assert;
 import BaseLayer.BaseClass;
 import PageLayer.LoginPage;
 import io.cucumber.java.en.Given;
-import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.cucumber.java.en.Then;
 
-public class LoginStep extends BaseClass {
+public class LoginStep {
 
-	private LoginPage loginPage;
+    private LoginPage loginPage;
 
-	@Given("Sauce user is on the login page")
-	public void sauce_user_is_on_the_login_page() {
-		BaseClass.initialization(); // Open browser and navigate to URL
-		loginPage = new LoginPage(); // Initialize LoginPage object
-	}
+    // Scenario: User lands on the login page
+    @Given("Sauce user is on the login page")
+    public void sauce_user_is_on_the_login_page() {
+        BaseClass.initialization("chrome");
+        loginPage = new LoginPage();
+        Assert.assertTrue(loginPage.isLoginPageDisplayed(), "Login page is not displayed.");
+    }
 
-	@When("user enters username as {string} and password as {string}")
-	public void user_enters_username_as_and_password_as(String username, String password) {
-		if (loginPage == null) {
-			System.out.println("LoginPage object is not initialized!");
-			loginPage = new LoginPage();
-		}
-		loginPage.enterUsername(username); // Enter username
-		loginPage.enterPassword(password); // Enter password
-	}
+    // Scenario: User enters valid credentials
+    @When("user enters username as {string} and password as {string}")
+    public void user_enters_username_as_and_password_as(String username, String password) {
+        loginPage.enterUsername(username);
+        loginPage.enterPassword(password);
+    }
 
-	@Then("user clicks on the login button")
-	public void user_clicks_on_the_login_button() {
-		if (loginPage == null) {
-			System.out.println("LoginPage object is not initialized!");
-			loginPage = new LoginPage();
-		}
-		loginPage.clickLoginButton(); // Click login button
-	}
-
-	@When("user click on menu button")
-	public void user_click_on_menu_buton() {
-		if (loginPage == null) {
-			System.out.println("Reinitializing LoginPage object...");
-			loginPage = new LoginPage();
-		}
-		loginPage.clickOnMenu();
-	}
-
-	@When("sideBar is open and click on logOut")
-	public void side_bar_is_open_and_click_on_log_out() {
-		if (loginPage == null) {
-			System.out.println("Reinitializing LoginPage object...");
-			loginPage = new LoginPage();
-		}
-		loginPage.clickOnLogOut();
-	}
-	
-	@Then("user is on loginPage")
-	public void user_is_on_login_page() {
-	    // Write code here that turns the phrase above into concrete actions
-	    throw new io.cucumber.java.PendingException();
-	}
-
+    // Scenario: User clicks on the login button
+    @When("user clicks on the login button")
+    public void user_clicks_on_the_login_button() {
+        loginPage.clickLoginButton();
+    }
 }

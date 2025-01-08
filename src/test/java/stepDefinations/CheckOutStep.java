@@ -1,183 +1,59 @@
-//package stepDefinations;
-//
-//import java.io.IOException;
-//import java.time.Duration;
-//
-//import org.openqa.selenium.By;
-//import org.openqa.selenium.support.ui.ExpectedConditions;
-//import org.openqa.selenium.support.ui.WebDriverWait;
-//
-//import BaseLayer.BaseClass;
-//import PageLayer.CheckoutPage;
-//import PageLayer.ProductPage;
-//import UtilsLayer.Utils;
-//import io.cucumber.java.en.Given;
-//import io.cucumber.java.en.Then;
-//import io.cucumber.java.en.When;
-//
-//public class CheckOutStep extends BaseClass {
-//
-//	private CheckoutPage checkOut; // Declare the CheckoutPage object
-//	private Utils util; // Declare the Utils object
-//	private ProductPage productPage; // Define the page object
-//
-////	public CheckOutStep(CheckoutPage checkOut) {
-////		this.checkOut = checkOut;
-////	}
-//
-//	@Then("user is on checkOutInfo page firstname {string} lastname {string} zip {string}")
-//	public void user_is_on_check_out_info_page_firstname_lastname_zip(String firstname, String lastname,
-//			String postalZip) {
-//		util = new Utils(); // Initialize the Utils object
-//		checkOut = new CheckoutPage(); // Initialize the CheckoutPage object
-//		productPage = new ProductPage(); // Initialize the page object
-//		productPage.verifyProductPage();
-//
-//		// Enter user details in checkout fields
-//		checkOut.enterFirstName(firstname);
-//		checkOut.enterLastName(lastname);
-//		checkOut.enterZipCode(postalZip);
-//	}
-//
-//	@Then("user is on checkOutInfo page")
-//	public void user_is_on_check_out_info_page() {
-//		System.out.println("User navigated to the Checkout Info Page.");
-//	}
-//
-//	@Then("click on continue button")
-//	public void click_on_continue_button() {
-//		checkOut.clickContinueButton(); // Click on the Continue button
-//		System.out.println("Continue button clicked.");
-//	}
-//
-//	@Given("User is on Checkout Overview page")
-//	public void user_is_on_checkout_overview_page() {
-//		util = new Utils(); // Initialize Utils if not already done
-//		String currentUrl = util.getUrl(); // Get the current URL
-//		System.out.println("Checkout Overview Page Current URL: " + currentUrl);
-//	}
-//
-//	@Then("capture screenshot")
-//	public void capture_screenshot() throws IOException {
-//		util = new Utils(); // Ensure Utils is initialized
-//		util.fullScreenshot("saucedemo", "order"); // Capture full screenshot with name "order"
-//		System.out.println("Screenshot captured for order.");
-//	}
-//
-//	@When("user click on finsh Button")
-//	public void user_click_on_finsh_button() {
-//		if (checkOut == null) {
-//			checkOut = new CheckoutPage(); // Initialize if null
-//		}
-//		checkOut.clickFinishButton();
-//	}
-//
-//	@Then("show message")
-//	public void show_message() {
-//		if (checkOut == null) {
-//			checkOut = new CheckoutPage(); // Initialize if null
-//		}
-//		checkOut.clickFinishButton();
-//
-//		String successMessage = checkOut.getSuccessMessage(); // Fetch success message
-//		System.out.println("Order Success Message: " + successMessage);
-//
-//		driver.findElement(By.id("finish")).click();
-//		WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
-//		wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h2[@class='complete-header']")));
-//		String orderConfirmation = driver.findElement(By.xpath("//h2[@class='complete-header']")).getText();
-//		System.out.println("Order Confirmation Message: " + orderConfirmation);
-//
-//	}
-//}
-
 package stepDefinations;
 
 import java.io.IOException;
-import java.time.Duration;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.Assert;
 
-import BaseLayer.BaseClass;
 import PageLayer.CheckoutPage;
-import PageLayer.ProductPage;
 import UtilsLayer.Utils;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
-public class CheckOutStep extends BaseClass {
+public class CheckoutStep {
 
-    private CheckoutPage checkOut;
-    private Utils util;
-    private ProductPage productPage;
+	private CheckoutPage checkoutPage;
+	private Utils util;
 
-    // Initialize Page objects once before each test
-    @Given("user is on checkOutInfo page firstname {string} lastname {string} zip {string}")
-    public void user_is_on_check_out_info_page_firstname_lastname_zip(String firstname, String lastname, String postalZip) {
-        util = new Utils();  // Initialize the Utils object
-        checkOut = new CheckoutPage();  // Initialize the CheckoutPage object
-        productPage = new ProductPage();  // Initialize the ProductPage object
-        
-        productPage.verifyProductPage();  // Ensure the user is on the product page
-        
-        // Enter user details in checkout fields
-        checkOut.enterFirstName(firstname);
-        checkOut.enterLastName(lastname);
-        checkOut.enterZipCode(postalZip);
-    }
+	public CheckoutStep() {
+		checkoutPage = new CheckoutPage();
+		util = new Utils();
+	}
 
-    @Then("user is on checkOutInfo page")
-    public void user_is_on_check_out_info_page() {
-        System.out.println("User navigated to the Checkout Info Page.");
-    }
+	// Scenario: User provides shipping information
+	@When("user is on checkOutInfo page firstname {string} lastname {string} zip {string}")
+	public void user_is_on_check_out_info_page_firstname_lastname_zip(String firstName, String lastName,
+			String zipCode) {
+		checkoutPage.enterShippingInformation(firstName, lastName, zipCode);
+	}
 
-    @Then("click on continue button")
-    public void click_on_continue_button() {
-        checkOut.clickContinueButton(); // Click on the Continue button
-        System.out.println("Continue button clicked.");
-    }
+	@Then("click on continue button")
+	public void click_on_continue_button() {
+		checkoutPage.clickContinueButton();
+	}
 
-    @Given("User is on Checkout Overview page")
-    public void user_is_on_checkout_overview_page() {
-        util = new Utils();  // Ensure Utils is initialized
-        String currentUrl = util.getUrl();  // Get the current URL of the page
-        System.out.println("Checkout Overview Page Current URL: " + currentUrl);
-    }
+	@Given("User is on Checkout Overview page")
+	public void user_is_on_checkout_overview_page() {
 
-    @Then("capture screenshot")
-    public void capture_screenshot() throws IOException {
-        util = new Utils();  // Ensure Utils is initialized
-        util.fullScreenshot("saucedemo", "order"); // Capture full screenshot with name "order"
-        System.out.println("Screenshot captured for order.");
-    }
+	}
 
-    @When("user click on finsh Button")
-    public void user_click_on_finsh_button() {
-        if (checkOut == null) {
-            checkOut = new CheckoutPage(); // Initialize if null
-        }
-        checkOut.clickFinishButton();  // Click the finish button
-    }
-    
+	@Then("capture screenshot")
+	public void capture_screenshot() throws IOException {
 
-    @Then("show message")
-    public void show_message() {
-        if (checkOut == null) {
-            checkOut = new CheckoutPage();  // Initialize if null
-        }
-        checkOut.clickFinishButton();  // Click the finish button again to complete the order
+		util.fullScreenshot("saucedemo", "order");
+	}
 
-        String successMessage = checkOut.getSuccessMessage();  // Fetch the success message
-        System.out.println("Order Success Message: " + successMessage);
+	// Scenario: User confirms the order
+	@When("user click on finish Button")
+	public void user_click_on_finish_button() {
+		checkoutPage.clickFinishButton();
 
-        // Perform additional actions after finishing the checkout process
-        driver.findElement(By.id("finish")).click();  // Example of clicking 'finish' button
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h2[@class='complete-header']")));
-        String orderConfirmation = driver.findElement(By.xpath("//h2[@class='complete-header']")).getText();
-        System.out.println("Order Confirmation Message: " + orderConfirmation);
-    }
+	}
+
+	// Scenario: User verifies the order completion message
+	@Then("user should see the order confirmation message")
+	public void user_should_see_the_order_confirmation_message() {
+		Assert.assertEquals(checkoutPage.getSuccessMessage(), "Thank you for your order!\r\n"
+				+ "Your order has been dispatched, and will arrive just as fast as the pony can get there!");
+	}
 }
