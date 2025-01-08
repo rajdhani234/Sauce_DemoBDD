@@ -1,0 +1,27 @@
+# Ignore logs folder
+logs/
+
+# Ignore the saucedemo folder
+saucedemo/
+
+# Ignore test output folder
+test-output/
+
+# Ignore target/test-classes/Runner folder
+target/test-classes/Runner/
+
+# Ignore cucumber reports folder
+target/cucumber-reports/
+
+
+# Ignore build and generated files
+target/
+
+# Ignore Eclipse specific files
+.classpath
+.factorypath
+.settings/
+
+# Ignore Maven metadata
+target/classes/META-INF/maven/
+
